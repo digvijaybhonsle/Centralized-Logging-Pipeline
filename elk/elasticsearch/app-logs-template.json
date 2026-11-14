@@ -1,0 +1,72 @@
+{
+  "index_patterns": ["app-logs-*"],
+  "priority": 100,
+  "template": {
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "service": {
+          "type": "keyword"
+        },
+        "environment": {
+          "type": "keyword"
+        },
+        "level": {
+          "type": "keyword"
+        },
+        "requestId": {
+          "type": "keyword"
+        },
+        "traceId": {
+          "type": "keyword"
+        },
+        "msg": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "message": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "responseTime": {
+          "type": "long"
+        },
+        "time": {
+          "type": "long"
+        },
+        "pid": {
+          "type": "long"
+        },
+        "req": {
+          "properties": {
+            "method": {
+              "type": "keyword"
+            },
+            "url": {
+              "type": "keyword"
+            }
+          }
+        },
+        "res": {
+          "properties": {
+            "statusCode": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}
