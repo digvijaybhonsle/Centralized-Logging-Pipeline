@@ -1,0 +1,127 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - logging-network
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "127.0.0.1:5601:5601"
+    networks:
+      - logging-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    mem_limit: 1g
+    restart: unless-stopped
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    container_name: logstash
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    volumes:
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    networks:
+      - logging-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    mem_limit: 768m
+    restart: unless-stopped
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+    container_name: filebeat
+    user: root
+    command: ["--strict.perms=false"]
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/app:ro
+    networks:
+      - logging-network
+    depends_on:
+      - logstash
+    mem_limit: 256m
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:${LOKI_VERSION}
+    container_name: centralized_loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./grafana-stack/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3101:3100"
+    networks:
+      - logging-network
+    mem_limit: 512m
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION}
+    container_name: centralized_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3002:3000"
+    networks:
+      - logging-network
+    depends_on:
+      - loki
+    mem_limit: 512m
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:${ALLOY_VERSION}
+    container_name: alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./grafana-stack/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./logs:/var/log/app:ro
+      - alloy_data:/var/lib/alloy/data
+    networks:
+      - logging-network
+    depends_on:
+      - loki
+    mem_limit: 256m
+    restart: unless-stopped
+
+volumes:
+  elasticsearch_data:
+  loki_data:
+  grafana_data:
+  alloy_data:
+
+networks:
+  logging-network:
+    name: logging-network
+    driver: bridge
