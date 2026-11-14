@@ -115,6 +115,61 @@ services:
     mem_limit: 256m
     restart: unless-stopped
 
+
+  user-service:
+    build:
+      context: ./services/user-service
+    container_name: centralized_user_service
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    ports:
+      - "127.0.0.1:3102:3001"
+    networks:
+      - logging-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./services/order-service
+    container_name: centralized_order_service
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+    ports:
+      - "127.0.0.1:3103:3002"
+    networks:
+      - logging-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+    container_name: centralized_payment_service
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+    ports:
+      - "127.0.0.1:3104:3003"
+    networks:
+      - logging-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   elasticsearch_data:
   loki_data:
