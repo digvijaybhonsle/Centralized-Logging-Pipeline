@@ -123,8 +123,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - LOG_FILE=/var/log/app/user-service.json
     ports:
       - "127.0.0.1:3102:3001"
+    volumes:
+      - ./logs:/var/log/app
     networks:
       - logging-network
     healthcheck:
@@ -141,8 +144,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3002
+      - LOG_FILE=/var/log/app/order-service.json
+      - USER_SERVICE_URL=http://user-service:3001
     ports:
       - "127.0.0.1:3103:3002"
+    volumes:
+      - ./logs:/var/log/app
     networks:
       - logging-network
     healthcheck:
@@ -159,8 +166,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3003
+      - LOG_FILE=/var/log/app/payment-service.json
     ports:
       - "127.0.0.1:3104:3003"
+    volumes:
+      - ./logs:/var/log/app
     networks:
       - logging-network
     healthcheck:
