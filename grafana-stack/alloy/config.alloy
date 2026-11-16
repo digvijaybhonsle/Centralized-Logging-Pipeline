@@ -8,9 +8,36 @@ local.file_match "application_logs" {
   sync_period = "5s"
 }
 
+loki.process "application_logs" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.json {
+    expressions = {
+      service   = "service",
+      level     = "level",
+      requestId = "requestId",
+      traceId   = "traceId",
+    }
+  }
+
+  stage.labels {
+    values = {
+      service = "service",
+      level   = "level",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      requestId = "requestId",
+      traceId   = "traceId",
+    }
+  }
+}
+
 loki.source.file "application_logs" {
   targets    = local.file_match.application_logs.targets
-  forward_to = [loki.write.local.receiver]
+  forward_to = [loki.process.application_logs.receiver]
 }
 
 loki.write "local" {
