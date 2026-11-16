@@ -1,2 +1,0 @@
-{"@timestamp":"2026-11-14T09:43:53Z","service":"day1-test","level":"info","message":"centralized logging pipeline test","traceId":"day1-001"}
-{"@timestamp":"2026-11-14T10:00:09Z","service":"day1-test","level":"info","message":"Filebeat to Elasticsearch delivery test","traceId":"day1-002"}
