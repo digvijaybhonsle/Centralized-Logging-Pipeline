@@ -19,7 +19,44 @@ const streams = pino.multistream([
   }
 ]);
 
-const logger = pino({ level: process.env.LOG_LEVEL || "info" }, streams);
+const logger = pino({
+  level: process.env.LOG_LEVEL || "info",
+  redact: {
+    paths: [
+      "password",
+      "*.password",
+      "email",
+      "*.email",
+      "phone",
+      "*.phone",
+      "mobile",
+      "*.mobile",
+      "authorization",
+      "headers.authorization",
+      "req.headers.authorization",
+      "cookie",
+      "headers.cookie",
+      "req.headers.cookie",
+      "accessToken",
+      "*.accessToken",
+      "refreshToken",
+      "*.refreshToken",
+      "token",
+      "*.token",
+      "apiKey",
+      "*.apiKey",
+      "secret",
+      "*.secret",
+      "cardNumber",
+      "*.cardNumber",
+      "cvv",
+      "*.cvv",
+      "ssn",
+      "*.ssn"
+    ],
+    censor: "[REDACTED]"
+  }
+}, streams);
 
 app.use(express.json());
 
@@ -48,7 +85,7 @@ app.use(pinoHttp({
     req(req) {
       return {
         method: req.method,
-        url: req.url
+        url: req.url.split('?')[0]
       };
     },
     res(res) {

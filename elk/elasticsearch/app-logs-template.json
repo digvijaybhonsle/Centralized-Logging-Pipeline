@@ -1,5 +1,7 @@
 {
-  "index_patterns": ["app-logs-*"],
+  "index_patterns": [
+    "app-logs-*"
+  ],
   "priority": 100,
   "template": {
     "mappings": {
@@ -67,6 +69,10 @@
           }
         }
       }
+    },
+    "settings": {
+      "index.lifecycle.name": "application-logs-policy",
+      "index.lifecycle.rollover_alias": "app-logs-write"
     }
   }
 }
