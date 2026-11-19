@@ -255,12 +255,12 @@ Loki stores log streams indexed by labels and the log content separately. Querie
 - **Alert rule:** *ApplicationErrorLogs*, which evaluates:
 
 ```logql
-sum(count_over_time({job="application", level="50"}[5m]))
+sum(count_over_time({job="application", level="50"}[1m]))
 ```
 
-The alert fires when the five-minute error-log count is greater than zero for one minute, with warning severity.
+The alert fires when more than five error-level logs occur in a one-minute window and the condition remains true for one minute, with warning severity.
 
-The dashboard uses the Loki datasource (UID `eg4gv78cjmdc0e`) and has UID `application-logs`. The `ApplicationErrorLogs` alert rule was verified in the running Grafana configuration; it is not present in the repository files inspected here.
+The dashboard uses the Loki datasource (UID `eg4gv78cjmdc0e`) and has UID `application-logs`. The live `ApplicationErrorLogs` rule was verified through the Grafana API. Its JSON export is retained at `grafana-stack/exports/application-error-alert.json`.
 
 ---
 
@@ -314,11 +314,11 @@ The shared application log directory is a host-mounted path used by the services
 
 ### Elasticsearch lifecycle
 
-`application-logs-policy` rolls indices over after **7 days or 5 GB**. **No delete phase is configured**, so Elasticsearch does not delete old indices automatically and disk usage grows until they are removed manually.
+`application-logs-policy` rolls indices over after **7 days or 5 GB** and has a **30-day delete phase**. For rolled-over indices, the delete-phase age is measured from the rollover lifecycle transition, so actual retention from initial index creation can exceed 30 days. Legacy date-named application indices use a separate 30-day delete policy.
 
 ### Loki retention
 
-The current Loki configuration does not define an explicit retention period. Do not assume automatic log deletion or a specific retention duration.
+The Loki configuration enables compactor retention with a **720-hour (30-day) retention period**. Configuration and readiness were verified; actual retention deletion has not yet been independently observed.
 
 ### Data safety
 

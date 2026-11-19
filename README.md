@@ -33,10 +33,11 @@
 13. [Starting the Project](#starting-the-project)
 14. [Application Endpoints](#application-endpoints)
 15. [Testing](#testing)
-16. [Troubleshooting](#troubleshooting)
-17. [Persistence and Shutdown](#persistence-and-shutdown)
-18. [Future Improvements](#future-improvements)
-19. [Author](#author)
+16. [Acceptance Test Report](#acceptance-test-report)
+17. [Troubleshooting](#troubleshooting)
+18. [Persistence and Shutdown](#persistence-and-shutdown)
+19. [Future Improvements](#future-improvements)
+20. [Author](#author)
 
 ---
 
@@ -285,7 +286,7 @@ Confirm that the response contains the same `X-Request-ID`, then search for that
 | ILM policy | `application-logs-policy` | Controls rollover |
 
 - Indices **roll over after 7 days or 5 GB**, whichever comes first.
-- **No delete phase is configured.** Old indices are not removed automatically, and disk usage will grow until you clean up manually.
+- A **30-day delete phase** is configured. For rolled-over indices, the delete-phase age is measured from the rollover lifecycle transition; actual retention from initial index creation can therefore exceed 30 days.
 
 ---
 
@@ -295,14 +296,14 @@ Confirm that the response contains the same `X-Request-ID`, then search for that
 |---|---|
 | Dashboard | **Centralized Application Logs** |
 | Alert rule | **ApplicationErrorLogs** |
-| Query window | 5 minutes |
-| Condition | Greater than 0 for 1 minute |
+| Query window | 1 minute |
+| Condition | Greater than 5 for 1 minute |
 | Severity | Warning |
 
 LogQL expression:
 
 ```logql
-sum(count_over_time({job="application", level="50"}[5m]))
+sum(count_over_time({job="application", level="50"}[1m]))
 ```
 
 ---
@@ -433,6 +434,24 @@ The integration suite exercises the full flow from the services through both pip
 *(Recorded result from a past run. It is not a guarantee for future runs.)*
 
 ---
+
+## Acceptance Test Report
+
+Phase 2 acceptance and performance checks are documented in
+[docs/PHASE2-ACCEPTANCE-TESTS.md](docs/PHASE2-ACCEPTANCE-TESTS.md).
+
+Latest measured results include:
+
+- Filebeat-to-Elasticsearch ingestion: **3.86 seconds** (target: under 5 seconds).
+- Loki 24-hour query: **0.081 seconds average**, **0.089 seconds maximum**
+  across three trials (target: under 1 second).
+- Elasticsearch heap: **398.08 MiB used** of 512 MiB.
+- PII scan: **zero email-pattern matches** and zero non-redacted sensitive
+  field values across 12,495 scanned documents.
+- Grafana error alert firing and recovery: verified.
+
+The report also records security, retention configuration, trace ID
+filtering, backup verification, and outstanding lifecycle checks.
 
 ## Troubleshooting
 

@@ -1,3 +1,10 @@
 .env
 security/certs/*.key
 logs/*.json
+
+# Runtime backup data
+backups/
+
+security/nginx/kibana.htpasswd
+*.pre-tls-*
+*.pre-auth-*

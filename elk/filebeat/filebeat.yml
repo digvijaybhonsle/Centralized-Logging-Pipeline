@@ -3,6 +3,7 @@ filebeat.inputs:
     id: application-json-logs
     enabled: true
     prospector.scanner.fingerprint.length: 64
+    prospector.scanner.check_interval: 1s
     paths:
       - /var/log/app/*.json
     parsers:
@@ -12,5 +13,11 @@ filebeat.inputs:
 
 output.logstash:
   hosts: ["logstash:5044"]
+  ssl.certificate_authorities: ["/etc/filebeat/certs/ca.crt"]
+  ssl.verification_mode: full
 
 logging.level: info
+
+http.enabled: true
+http.host: 127.0.0.1
+http.port: 5066

@@ -6,11 +6,13 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - path.repo=/usr/share/elasticsearch/snapshots
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./backups/elasticsearch:/usr/share/elasticsearch/snapshots
     networks:
       - logging-network
-    mem_limit: 1g
+    mem_limit: 1536m
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null || exit 1"]
       interval: 10s
@@ -32,14 +34,23 @@ services:
         condition: service_healthy
     mem_limit: 1g
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status -o /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
 
   logstash:
     image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
     container_name: logstash
+    command: ["--pipeline.workers", "4", "--pipeline.batch.size", "50"]
     environment:
       - LS_JAVA_OPTS=-Xms256m -Xmx256m
     volumes:
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./security/certs/logstash.crt:/usr/share/logstash/config/certs/logstash.crt:ro
+      - ./security/certs/logstash.key:/usr/share/logstash/config/certs/logstash.key:ro
     networks:
       - logging-network
     depends_on:
@@ -47,6 +58,12 @@ services:
         condition: service_healthy
     mem_limit: 768m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9600/ -o /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
@@ -56,12 +73,19 @@ services:
     volumes:
       - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - ./logs:/var/log/app:ro
+      - ./security/certs/ca.crt:/etc/filebeat/certs/ca.crt:ro
     networks:
       - logging-network
     depends_on:
       - logstash
     mem_limit: 256m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5066/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   loki:
     image: grafana/loki:${LOKI_VERSION}
@@ -76,6 +100,12 @@ services:
       - logging-network
     mem_limit: 512m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/busybox/wget", "-q", "-O", "/dev/null", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION}
@@ -91,6 +121,12 @@ services:
       - loki
     mem_limit: 512m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 
   nginx:
@@ -101,6 +137,7 @@ services:
       - "127.0.0.1:8444:444"
     volumes:
       - ./security/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./security/nginx/kibana.htpasswd:/etc/nginx/conf.d/kibana.htpasswd:ro
       - ./security/certs:/etc/nginx/certs:ro
     networks:
       - logging-network
@@ -108,6 +145,12 @@ services:
       - kibana
       - grafana
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$(curl -ksS -o /dev/null -w '%{http_code}' https://localhost:443/api/status)\" = \"401\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
 
   alloy:
     image: grafana/alloy:${ALLOY_VERSION}
@@ -127,6 +170,16 @@ services:
       - loki
     mem_limit: 256m
     restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - /usr/bin/bash
+        - -c
+        - 'exec 3<>/dev/tcp/127.0.0.1/12345 && printf "GET /-/ready HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3 && read -r status <&3 && [[ "$$status" == *"200"* ]]'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 
   user-service:

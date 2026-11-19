@@ -72,7 +72,8 @@
     },
     "settings": {
       "index.lifecycle.name": "application-logs-policy",
-      "index.lifecycle.rollover_alias": "app-logs-write"
+      "index.lifecycle.rollover_alias": "app-logs-write",
+      "number_of_replicas": 0
     }
   }
 }
